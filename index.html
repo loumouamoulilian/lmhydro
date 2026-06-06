@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f2f32" />
+    <title>LOUMOUAMOU HYDRO</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles-square.css?v=14" />
+  </head>
+  <body>
+    <canvas id="rainCanvas" aria-hidden="true"></canvas>
+    <div class="atmosphere" aria-hidden="true"></div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">LH</span>
+          <div>
+            <strong>LOUMOUAMOU HYDRO</strong>
+            <small>Caniveaux BA et drainage urbain</small>
+          </div>
+        </div>
+        <nav class="nav" aria-label="Modules">
+          <a href="#hydro">Hydrologie</a>
+          <a href="#section">Section</a>
+          <a href="#ferraillage">Ferraillage</a>
+          <a href="#plans">Plans</a>
+          <a href="#rapport">Rapport</a>
+        </nav>
+        <div class="project-box">
+          <label>Projet
+            <input id="projectName" value="Caniveau Brazzaville - Exemple" />
+          </label>
+          <div class="stack">
+            <button id="saveProject" class="ghost-btn">Sauvegarder</button>
+            <label class="ghost-btn file-btn">Charger JSON<input id="loadProject" type="file" accept="application/json" /></label>
+          </div>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="hero">
+          <canvas id="heroCanvas" width="1200" height="620" aria-hidden="true"></canvas>
+          <div class="hero-content">
+            <p class="eyebrow">Bureau d'étude hydraulique et béton armé</p>
+            <h1>LOUMOUAMOU HYDRO</h1>
+            <p class="hero-copy">Dimensionnement rapide d'un caniveau à Brazzaville : méthode rationnelle, Manning-Strickler, ferraillage BA, plan SVG, vue 3D, exports PDF, DXF et Excel.</p>
+          </div>
+          <div class="hero-kpis">
+            <span><strong id="heroQp">0.00</strong>m3/s</span>
+            <span><strong id="heroSection">-</strong>section</span>
+            <span><strong id="heroSteel">-</strong>acier</span>
+          </div>
+        </header>
+
+        <section id="hydro" class="module hydro-grid">
+          <div class="panel form-panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">1. Méthode rationnelle</p>
+                <h2>Bassin versant et pluie</h2>
+              </div>
+              <span id="hydroStatus" class="badge">Temps réel</span>
+            </div>
+
+            <div class="form-grid">
+              <label>Zone de Brazzaville
+                <select id="zone">
+                  <option value="dense">Poto-Poto / Bacongo dense</option>
+                  <option value="residentiel">Ouenzé / Talangaï résidentiel</option>
+                  <option value="admin">Zone administrative / bitumée</option>
+                  <option value="collines">Kinsoundi / collines sableuses</option>
+                  <option value="manuel">Saisie manuelle</option>
+                </select>
+              </label>
+              <label>Coefficient C
+                <input id="runoffC" type="number" min="0.05" max="0.98" step="0.01" value="0.78" />
+              </label>
+              <label>Superficie A (ha)
+                <input id="areaHa" type="number" min="0.01" step="0.01" value="18.5" />
+              </label>
+              <label>Période retour T (ans)
+                <select id="returnPeriod">
+                  <option>2</option>
+                  <option>5</option>
+                  <option selected>10</option>
+                  <option>25</option>
+                  <option>50</option>
+                </select>
+              </label>
+              <label>ParamÃ¨tre IDF a
+                <input id="intensityA" type="number" min="1" step="1" value="660" />
+              </label>
+              <label>ParamÃ¨tre IDF b
+                <input id="intensityB" type="number" min="0.01" step="0.01" value="0.50" />
+              </label>
+              <label>Longueur hydraulique L (m)
+                <input id="lengthL" type="number" min="5" step="1" value="820" />
+              </label>
+              <label>Pente bassin S (m/m)
+                <input id="slopeS" type="number" min="0.001" step="0.001" value="0.018" />
+              </label>
+              <label>Temps de concentration
+                <select id="tcMode">
+                  <option value="kirpich">Kirpich automatique</option>
+                  <option value="manual">Saisie manuelle</option>
+                </select>
+              </label>
+              <label>tc manuel (min)
+                <input id="tcManual" type="number" min="1" step="1" value="22" />
+              </label>
+            </div>
+
+            <label class="switch">
+              <input id="sedimentMargin" type="checkbox" checked />
+              <span>Marge sécurité sédimentation +20%</span>
+            </label>
+
+            <button id="calculateAll" class="primary-btn">Calculer</button>
+          </div>
+
+          <div class="panel result-panel">
+            <div class="result-ring">
+              <span id="qpValue">0.00</span>
+              <small>m3/s</small>
+            </div>
+            <div class="flow-bar"><span id="flowBar"></span></div>
+            <div id="hydroMetrics" class="metric-grid"></div>
+            <div id="warnings" class="warnings"></div>
+          </div>
+
+          <div class="panel wide">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Courbes IDF</p>
+                <h2>Montana-Talbot ANAC, point de fonctionnement</h2>
+              </div>
+              <span id="idfPoint" class="badge teal">-</span>
+            </div>
+            <svg id="idfChart" class="chart" viewBox="0 0 900 420" role="img" aria-label="Courbes IDF Brazzaville"></svg>
+          </div>
+        </section>
+
+        <section id="section" class="module section-grid">
+          <div class="panel form-panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">2. Manning-Strickler</p>
+                <h2>Dimensionnement hydraulique</h2>
+              </div>
+              <span class="badge">JSON moteur</span>
+            </div>
+            <div class="form-grid">
+              <label>Débit Qp utilisé (m3/s)
+                <input id="designQp" type="number" min="0.001" step="0.001" />
+              </label>
+              <label>Coefficient K
+                <select id="stricklerK">
+                  <option value="70">Béton courant K=70</option>
+                  <option value="80">Béton soigné K=80</option>
+                  <option value="90">PVC / revêtement lisse K=90</option>
+                </select>
+              </label>
+              <label>Pente collecteur I (m/m)
+                <input id="collectorSlope" type="number" min="0.0005" step="0.0005" value="0.006" />
+              </label>
+              <label>Type de section
+                <select id="sectionType">
+                  <option value="rect">Rectangulaire</option>
+                  <option value="circ">Circulaire</option>
+                </select>
+              </label>
+              <label>Remplissage sécurité
+                <input id="fillRatio" type="number" min="0.5" max="1" step="0.05" value="0.80" />
+              </label>
+              <label>b imposé hydraulique (m, optionnel)
+                <input id="fixedWidth" type="number" min="0" step="0.05" value="0" />
+              </label>
+            </div>
+            <button id="sizeSection" class="primary-btn">Dimensionner section</button>
+          </div>
+
+          <div class="panel">
+            <h2>Résultat hydraulique</h2>
+            <div id="sectionResult" class="big-result"></div>
+            <pre id="jsonOutput" class="json-box"></pre>
+          </div>
+        </section>
+
+        <section id="ferraillage" class="module reinforce-grid">
+          <div class="panel form-panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">3. Béton armé</p>
+                <h2>Ferraillage automatique du caniveau</h2>
+              </div>
+              <span class="badge">ELU / ELS simplifiés</span>
+            </div>
+            <div class="form-grid">
+              <label>Largeur intérieure b (m)
+                <input id="chanB" type="number" min="0.2" step="0.05" value="0.80" />
+              </label>
+              <label>Hauteur intérieure h (m)
+                <input id="chanH" type="number" min="0.2" step="0.05" value="0.80" />
+              </label>
+              <label>Epaisseur radier (m)
+                <input id="slabT" type="number" min="0.10" step="0.05" value="0.20" />
+              </label>
+              <label>Epaisseur parois (m)
+                <input id="wallT" type="number" min="0.10" step="0.05" value="0.15" />
+              </label>
+              <label>Longueur caniveau (m)
+                <input id="chanLength" type="number" min="1" step="0.5" value="24" />
+              </label>
+              <label>Béton
+                <select id="concreteClass">
+                  <option value="20">C20/25</option>
+                  <option value="25" selected>C25/30</option>
+                  <option value="30">C30/37</option>
+                </select>
+              </label>
+              <label>Acier
+                <select id="steelFy">
+                  <option value="400">Fe400</option>
+                  <option value="500" selected>Fe500</option>
+                </select>
+              </label>
+              <label>Enrobage (mm)
+                <input id="cover" type="number" min="25" step="5" value="40" />
+              </label>
+              <label>Poids volumique sol gamma (kN/m3)
+                <input id="soilGamma" type="number" min="10" step="0.5" value="18" />
+              </label>
+              <label>Angle frottement phi (deg)
+                <input id="soilPhi" type="number" min="15" max="45" step="1" value="30" />
+              </label>
+              <label>Ka manuel (0 = auto)
+                <input id="kaManual" type="number" min="0" step="0.01" value="0" />
+              </label>
+              <label>Présence d'eau
+                <select id="waterPresence">
+                  <option value="no">Non</option>
+                  <option value="yes">Oui</option>
+                </select>
+              </label>
+              <label>Surcharge roulante (kN/m2)
+                <input id="trafficLoad" type="number" min="0" step="1" value="12" />
+              </label>
+              <label>Trafic
+                <select id="trafficType">
+                  <option value="leger">Léger</option>
+                  <option value="moyen" selected>Moyen</option>
+                  <option value="lourd">Lourd</option>
+                </select>
+              </label>
+            </div>
+            <label class="switch">
+              <input id="autoThickness" type="checkbox" checked />
+              <span>Epaisseurs automatiques selon b : parois = ((b x 100) / 40 + 12.5) x 0.01, radier = parois + 0.05</span>
+            </label>
+            <div class="manual-steel">
+              <label class="switch">
+                <input id="manualSteel" type="checkbox" />
+                <span>Modifier manuellement les sections des fers obtenus</span>
+              </label>
+              <div class="manual-steel-grid">
+                <label>Radier longitudinal
+                  <span class="bar-picker">
+                    <select id="radierMainDia" data-manual-steel><option>8</option><option>10</option><option>12</option><option>14</option><option>16</option><option>20</option><option>25</option></select>
+                    <select id="radierMainSpacing" data-manual-steel><option>300</option><option>250</option><option>200</option><option>175</option><option>150</option><option>125</option><option>100</option></select>
+                  </span>
+                </label>
+                <label>Radier transversal
+                  <span class="bar-picker">
+                    <select id="radierDistDia" data-manual-steel><option>8</option><option>10</option><option>12</option><option>14</option><option>16</option><option>20</option><option>25</option></select>
+                    <select id="radierDistSpacing" data-manual-steel><option>300</option><option>250</option><option>200</option><option>175</option><option>150</option><option>125</option><option>100</option></select>
+                  </span>
+                </label>
+                <label>Parois verticales
+                  <span class="bar-picker">
+                    <select id="wallVertDia" data-manual-steel><option>8</option><option>10</option><option>12</option><option>14</option><option>16</option><option>20</option><option>25</option></select>
+                    <select id="wallVertSpacing" data-manual-steel><option>300</option><option>250</option><option>200</option><option>175</option><option>150</option><option>125</option><option>100</option></select>
+                  </span>
+                </label>
+                <label>Parois horizontales
+                  <span class="bar-picker">
+                    <select id="wallHorizDia" data-manual-steel><option>8</option><option>10</option><option>12</option><option>14</option><option>16</option><option>20</option><option>25</option></select>
+                    <select id="wallHorizSpacing" data-manual-steel><option>300</option><option>250</option><option>200</option><option>175</option><option>150</option><option>125</option><option>100</option></select>
+                  </span>
+                </label>
+                <label>Renforts d'angles
+                  <select id="angleDia" data-manual-steel><option>10</option><option selected>12</option><option>14</option><option>16</option><option>20</option><option>25</option></select>
+                </label>
+                <div id="manualSteelCheck" class="manual-steel-check"></div>
+              </div>
+            </div>
+            <button id="calculateSteel" class="primary-btn">Calculer ferraillage</button>
+          </div>
+
+          <div class="panel">
+            <h2>Notes de calcul BA</h2>
+            <div id="steelResults" class="steel-list"></div>
+          </div>
+        </section>
+
+        <section id="plans" class="module plans-grid">
+          <div class="panel wide">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">4. Plans chantier</p>
+                <h2>Coupe de ferraillage exportable</h2>
+              </div>
+              <div class="actions">
+                <button id="generatePlan" class="ghost-btn">Générer plan</button>
+                <button id="exportDxf" class="ghost-btn">Exporter DXF</button>
+              </div>
+            </div>
+            <svg id="planSvg" class="plan-svg" viewBox="0 0 960 560" role="img" aria-label="Plan de ferraillage"></svg>
+          </div>
+
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Vue 3D</p>
+                <h2>Caniveau dimensionné</h2>
+              </div>
+              <span class="badge teal">Isométrique</span>
+            </div>
+            <canvas id="threeCanvas" width="720" height="520"></canvas>
+            <div class="range-row">
+              <label>Rotation <input id="viewRotation" type="range" min="-35" max="35" value="0" /></label>
+            </div>
+          </div>
+        </section>
+
+        <section id="rapport" class="module report-grid">
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">5. Exports</p>
+                <h2>Rapport et données</h2>
+              </div>
+            </div>
+            <div class="actions wrap">
+              <button id="exportPdf" class="primary-btn">Exporter PDF</button>
+              <button id="exportExcel" class="ghost-btn">Exporter Excel CSV</button>
+              <button id="copyJson" class="ghost-btn">Copier JSON</button>
+            </div>
+            <div id="reportPreview" class="report-preview"></div>
+          </div>
+          <div class="panel">
+            <h2>Architecture prête à industrialiser</h2>
+            <div class="architecture">
+              <span>Web/PWA : HTML, CSS, JavaScript</span>
+              <span>Mobile iOS : écran SwiftUI miroir du moteur JS</span>
+              <span>Moteur : hydrologie, Manning-Strickler, BA</span>
+              <span>Exports : PDF navigateur, CSV Excel, DXF R12</span>
+              <span>Chantier : sauvegarde locale JSON et mode simplifié</span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app-hydro-v20.js?v=20"></script>
+  </body>
+</html>
