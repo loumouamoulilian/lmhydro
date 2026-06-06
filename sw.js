@@ -12,7 +12,7 @@ const ASSETS = [
   "/loumouamou-bh-v17.html",
   "/loumouamou-bh-v18.html",
   "/loumouamou-qp-v19.html",
-  "/loumouamou-hydro-v20.html",
+  "/index.html",
   "/styles.css",
   "/styles-canvas.css",
   "/styles-manual.css",
